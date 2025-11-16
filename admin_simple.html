@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin - Quản lý truy xuất nông sản</title>
+  <style>
+    body {font-family:"Segoe UI",sans-serif;background:#f4f8f4;color:#333;margin:0;}
+    header {background:#2d8a4d;color:white;padding:15px;text-align:center;font-size:20px;font-weight:bold;}
+    nav {display:flex;justify-content:center;gap:10px;background:#e8f5e9;padding:10px;flex-wrap:wrap;}
+    nav button {padding:8px 14px;border:none;background:#4caf50;color:white;border-radius:5px;cursor:pointer;}
+    nav button.active {background:#2d8a4d;}
+    section {display:none;padding:20px;}
+    section.active {display:block;}
+    table {width:100%;border-collapse:collapse;margin-top:10px;}
+    th,td {border:1px solid #ccc;padding:8px;text-align:left;}
+    th {background:#c8e6c9;}
+    tr:nth-child(even){background:#f9f9f9;}
+    .btn{padding:4px 8px;margin:0 2px;border:none;border-radius:4px;cursor:pointer;}
+    .btn.duyet{background:#4caf50;color:white;}
+    .btn.qr{background:#2196f3;color:white;}
+    .btn.xoa{background:#e53935;color:white;}
+    .btn.pdf{background:#8e24aa;color:white;}
+    .btn.view{background:#ffa000;color:white;}
+    .form-add{background:#fff;padding:10px;border-radius:5px;box-shadow:0 0 5px #ccc;margin-bottom:15px;}
+    input{padding:5px;margin:3px;}
+    .block-info{background:#fff;padding:10px;margin:8px 0;border-left:5px solid #4caf50;}
+    .qr-container {text-align:center;padding:30px;}
+    .qr-container button{margin-top:10px;padding:8px 14px;border:none;background:#4caf50;color:white;border-radius:6px;cursor:pointer;}
+
+    /* Modal xem chi tiết */
+    .modal {
+      position: fixed;top:0;left:0;width:100%;height:100%;
+      background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;
+    }
+    .modal-content {
+      background:white;padding:20px;border-radius:10px;width:80%;max-width:800px;
+      max-height:90%;overflow:auto;position:relative;
+    }
+    .modal-content h3 {margin-top:0;color:#2d8a4d;}
+    .modal-content img {width:250px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+    .modal-close {position:absolute;top:10px;right:10px;background:#e53935;color:white;border:none;padding:4px 10px;border-radius:5px;cursor:pointer;}
+  
+  </style>
+</head>
+<body>
+  <header>🧺 ADMIN - Quản lý truy xuất</header>
+
+  <nav>
+    <button class="active" onclick="showTab('lots')">📦 Lô hàng</button>
+    <button onclick="showTab('htx')">🏢 HTX</button>
+    <button onclick="showTab('chain')">⛓ Blockchain</button>
+    <button onclick="showTab('accounts')">👤 Tài khoản HTX</button>
+  </nav>
+
+  <!-- LÔ HÀNG -->
+  <section id="lots" class="active">
+    <h2>📦 Danh sách lô hàng</h2>
+    <table id="lotTable"><thead><tr><th>Mã lô</th><th>Sản phẩm</th><th>HTX</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- HTX -->
+  <section id="htx">
+    <h2>🏢 Quản lý HTX</h2>
+    <div class="form-add">
+      <input id="htxName" placeholder="Tên HTX">
+      <input id="htxLoc" placeholder="Khu vực">
+      <button class="btn duyet" onclick="addHTX()">Thêm</button>
+    </div>
+    <table id="htxTable"><thead><tr><th>ID</th><th>Tên HTX</th><th>Khu vực</th><th>Hành động</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- BLOCKCHAIN -->
+  <section id="chain">
+    <h2>⛓️ Chuỗi Blockchain</h2>
+    <div id="chainList"></div>
+  </section>
+
+  <!-- QUẢN LÝ TÀI KHOẢN -->
+  <section id="accounts">
+    <h2>👤 Quản lý tài khoản HTX</h2>
+    <div class="form-add">
+      <input id="accUser" placeholder="Tên đăng nhập (VD: htx_xoai)">
+      <input id="accPass" placeholder="Mật khẩu mặc định">
+      <button class="btn duyet" onclick="addAccount()">Thêm tài khoản</button>
+    </div>
+    <table id="accTable">
+      <thead><tr><th>Tên đăng nhập</th><th>Mật khẩu</th><th>Vai trò</th><th>Hành động</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- Modal chi tiết -->
+<div class="modal" id="detailModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal()">✖</button>
+    <div id="modalBody"></div>
+    <div id="modalBtns">
+      <button class="btn duyet" id="btnApprove" style="display: none;">✅ Duyệt lô hàng</button>
+    </div>
+  </div>
+</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    // --- DỮ LIỆU CƠ BẢN ---
+    if(!localStorage.getItem("pendingLots")) localStorage.setItem("pendingLots", JSON.stringify([]));
+    if(!localStorage.getItem("htx_users")) localStorage.setItem("htx_users", JSON.stringify([]));
+    if(!localStorage.getItem("chain")) localStorage.setItem("chain", JSON.stringify([]));
+    if(!localStorage.getItem("accounts")) localStorage.setItem("accounts", JSON.stringify([{username:"admin",password:"admin123",role:"admin"}]));
+
+    // --- TAB SWITCH ---
+    function showTab(tab){
+      document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
+      document.querySelector(`nav button[onclick="showTab('${tab}')"]`).classList.add("active");
+      document.getElementById(tab).classList.add("active");
+      if(tab==="lots") loadLots();
+      if(tab==="htx") loadHTX();
+      if(tab==="chain") loadChain();
+      if(tab==="accounts") loadAccounts();
+    }
+
+    // === LÔ HÀNG ===
+    function loadLots(){
+      const lots=JSON.parse(localStorage.getItem("pendingLots"))||[];
+      const tbody=document.querySelector("#lotTable tbody");
+      tbody.innerHTML="";
+      lots.forEach((lot,i)=>{
+        const tr=document.createElement("tr");
+        tr.innerHTML=`
+          <td>${lot.lotId}</td>
+          <td>${lot.productName}</td>
+          <td>${lot.htxName}</td>
+          <td>${lot.status==="pending"?"⏳ Chờ duyệt":"✅ Đã duyệt"}</td>
+          <td>
+            <button class='btn view' onclick='viewDetail(${i})'>Xem</button>
+            ${lot.status==="approved"
+              ?`<button class='btn qr' onclick='showQR("${lot.lotId}")'>QR</button>
+                 <button class='btn pdf' onclick='exportPDF("${lot.lotId}")'>PDF</button>`
+              :``}
+            <button class='btn xoa' onclick='deleteLot(${i})'>Xóa</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function deleteLot(i){
+      if(!confirm("Xóa lô hàng này?"))return;
+      const lots=JSON.parse(localStorage.getItem("pendingLots"))||[];
+      lots.splice(i,1);
+      localStorage.setItem("pendingLots",JSON.stringify(lots));
+      loadLots();
+    }
+
+    // === XEM CHI TIẾT ===
+    let currentIndex = null;
+    function viewDetail(i){
+      currentIndex = i;
+      const lot=JSON.parse(localStorage.getItem("pendingLots"))[i];
+      const body=document.getElementById("modalBody");
+      body.innerHTML=`
+        <h3>${lot.productName} (${lot.lotId})</h3>
+        ${lot.productImg ? `<img src="${lot.productImg}" alt="Ảnh sản phẩm">` : `<p><i>Không có hình ảnh</i></p>`}
+        <p><b>HTX:</b> ${lot.htxName}</p>
+        <p><b>Địa chỉ:</b> ${lot.farmLocation||"—"}</p>
+        <p><b>Giống:</b> ${lot.variety||"—"}</p>
+        <p><b>Số lượng:</b> ${lot.quantity||"—"}</p>
+        <p><b>Ngày trồng:</b> ${lot.plantingDate||"—"}</p>
+        <p><b>Ngày thu hoạch:</b> ${lot.harvestDate||"—"}</p>
+        <p><b>Tiêu chuẩn:</b> ${lot.certification||"—"}</p>
+        <p><b>Người phụ trách:</b> ${lot.manager||"—"}</p>
+        <p><b>Phân bón:</b> ${lot.fertilizer||"—"}</p>
+        <p><b>Quy trình:</b> ${lot.farmingProcess||"—"}</p>
+        <p><b>Đóng gói:</b> ${lot.packInfo||"—"}</p>
+        <p><b>Vận chuyển:</b> ${lot.transportInfo||"—"}</p>
+        <p><b>Trạng thái:</b> ${lot.status==="approved"?"✅ Đã duyệt":"⏳ Chờ duyệt"}</p>
+      `;
+      document.getElementById("detailModal").style.display="flex";
+      document.getElementById("btnApprove").style.display = (lot.status==="pending") ? "inline-block" : "none";
+    }
+
+    function closeModal(){ document.getElementById("detailModal").style.display="none"; }
+
+    document.getElementById("btnApprove").addEventListener("click", ()=>approveLot(currentIndex));
+
+    async function approveLot(i){
+      const lots=JSON.parse(localStorage.getItem("pendingLots"))||[];
+      const chain=JSON.parse(localStorage.getItem("chain"))||[];
+      const lot=lots[i];
+      lot.status="approved";
+
+      const prevHash=chain.length?chain[chain.length-1].hash:"0000";
+      const timestamp=new Date().toLocaleString();
+      const hash=await digestMessage(lot.lotId+timestamp+prevHash);
+      chain.push({...lot,index:chain.length+1,timestamp,previousHash:prevHash,hash});
+      localStorage.setItem("chain",JSON.stringify(chain));
+      localStorage.setItem("pendingLots",JSON.stringify(lots));
+
+      alert("✅ Đã duyệt lô "+lot.lotId);
+      closeModal();
+      loadLots();
+    }
+
+    async function digestMessage(msg){
+      const buf=new TextEncoder().encode(msg);
+      const hashBuf=await crypto.subtle.digest("SHA-256",buf);
+      return Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
+
+    function showQR(lotId){
+      const lot=JSON.parse(localStorage.getItem("pendingLots")).find(l=>l.lotId===lotId);
+      const qrWin=window.open("");
+      qrWin.document.write(`
+        <div class='qr-container'>
+          <h2>Mã QR cho ${lot.lotId}</h2>
+          ${lot.productImg ? `<img src="${lot.productImg}" width="150"><br>` : ""}
+          <div id='qrcode'></div>
+          <p><b>Sản phẩm:</b> ${lot.productName}</p>
+          <p><b>HTX:</b> ${lot.htxName}</p>
+          <button onclick='window.close()'>⬅ Quay lại</button>
+        </div>`);
+      const viewerUrl=`${location.origin}/view.html?lot=${lotId}`;
+      new QRCode(qrWin.document.getElementById("qrcode"),{text:viewerUrl,width:200,height:200});
+    }
+// THAY THẾ TOÀN BỘ HÀM CŨ BẰNG HÀM NÀY
+
+function exportPDF(lotId) {
+  try {
+    // 1. Lấy dữ liệu lô hàng
+    const lot = JSON.parse(localStorage.getItem("pendingLots")).find(l => l.lotId === lotId);
+    if (!lot) {
+      alert("Không tìm thấy lô hàng!");
+      return;
+    }
+
+    // 2. Khởi tạo PDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // 3. Thêm nội dung text (phần này vẫn chạy ngay)
+    doc.setFontSize(18);
+    doc.text("THONG TIN TRUY XUAT NONG SAN", 10, 20);
+    doc.setFontSize(12);
+    doc.text(`Ma lo: ${lot.lotId}`, 10, 40);
+    doc.text(`San pham: ${lot.productName}`, 10, 50);
+    doc.text(`HTX: ${lot.htxName}`, 10, 60);
+    doc.text(`Dia chi: ${lot.farmLocation || "Chua cap nhat"}`, 10, 70);
+    doc.text(`Ngay thu hoach: ${lot.harvestDate || "N/A"}`, 10, 80);
+    doc.text(`Tieu chuan: ${lot.certification || "Chua cap nhat"}`, 10, 90);
+
+    // 4. TẠO MÃ QR
+    
+    // 4.1. Tạo div tạm
+    const tempQRContainer = document.createElement('div');
+    tempQRContainer.style.display = 'none';
+    document.body.appendChild(tempQRContainer);
+
+    // 4.2. URL
+    const viewerUrl = `${location.origin}/view.html?lot=${lotId}`;
+
+    // 4.3. Gọi lệnh vẽ QR (việc vẽ này mất vài ms)
+    new QRCode(tempQRContainer, {
+      text: viewerUrl,
+      width: 80,
+      height: 80
+    });
+
+    // 4.4. !! ĐÂY LÀ PHẦN SỬA LỖI !!
+    // Chờ 100ms để đảm bảo canvas đã được vẽ xong
+    setTimeout(() => {
+      try {
+        // 5. Lấy dữ liệu ảnh (SAU KHI ĐÃ CHỜ)
+        const qrCanvas = tempQRContainer.querySelector('canvas');
+        if (!qrCanvas) {
+          throw new Error("Không thể tìm thấy canvas QR sau khi chờ.");
+        }
+        
+        const qrDataURL = qrCanvas.toDataURL('image/png');
+        if (!qrDataURL || qrDataURL === "data:,") {
+             throw new Error("Canvas QR trống rỗng, không thể lấy dữ liệu ảnh.");
+        }
+
+        // 6. Thêm ảnh QR vào file PDF
+        doc.setFontSize(10);
+        doc.text("Quet ma de xem chi tiet:", 10, 105);
+        doc.addImage(qrDataURL, 'PNG', 10, 110, 80, 80);
+
+        // 7. Dọn dẹp div tạm
+        document.body.removeChild(tempQRContainer);
+
+        // 8. Lưu file
+        doc.save(`${lot.lotId}.pdf`);
+
+      } catch (e) {
+        // Bắt lỗi nếu có gì đó sai bên trong setTimeout
+        console.error("Lỗi khi xử lý ảnh QR (bên trong setTimeout):", e);
+        alert("Đã xảy ra lỗi khi xử lý ảnh QR: " + e.message);
+        if (document.body.contains(tempQRContainer)) {
+          document.body.removeChild(tempQRContainer); // Dọn dẹp nếu lỗi
+        }
+      }
+    }, 100); // Đợi 100 mili-giây
+
+  } catch (error) {
+    // Bắt lỗi ban đầu (ví dụ: jsPDF chưa tải hoặc tìm không thấy lô)
+    console.error("Lỗi khi bắt đầu xuất PDF:", error);
+    alert("Đã xảy ra lỗi khi bắt đầu tạo file PDF: " + error.message);
+  }
+}
+    // --- BLOCKCHAIN ---
+    function loadChain(){
+      const c=JSON.parse(localStorage.getItem("chain"))||[];
+      const d=document.getElementById("chainList");
+      d.innerHTML="";
+      c.forEach(b=>{
+        d.innerHTML+=`<div class='block-info'><b>Block #${b.index}</b><br>Lô: ${b.lotId}<br>Sản phẩm: ${b.productName}<br>HTX: ${b.htxName}<br><small>Hash: ${b.hash.slice(0,20)}...</small></div>`;
+      });
+    }
+
+    // --- HTX ---
+    function loadHTX(){
+      const list=JSON.parse(localStorage.getItem("htx_users"))||[];
+      const tb=document.querySelector("#htxTable tbody");
+      tb.innerHTML="";
+      list.forEach((h,i)=>{
+        tb.innerHTML+=`<tr><td>${h.id}</td><td contenteditable onblur="editHTX(${i},'name',this.innerText)">${h.name}</td><td contenteditable onblur="editHTX(${i},'location',this.innerText)">${h.location}</td><td><button class='btn xoa' onclick='deleteHTX(${i})'>Xóa</button></td></tr>`;
+      });
+    }
+    function addHTX(){
+      const n=htxName.value.trim(),l=htxLoc.value.trim();
+      if(!n||!l)return alert("Nhập đủ thông tin!");
+      const list=JSON.parse(localStorage.getItem("htx_users"))||[];
+      list.push({id:Date.now(),name:n,location:l});
+      localStorage.setItem("htx_users",JSON.stringify(list));
+      htxName.value=htxLoc.value=""; loadHTX();
+    }
+    function editHTX(i,k,v){const list=JSON.parse(localStorage.getItem("htx_users"));list[i][k]=v;localStorage.setItem("htx_users",JSON.stringify(list));}
+    function deleteHTX(i){if(!confirm("Xóa HTX?"))return;const list=JSON.parse(localStorage.getItem("htx_users"));list.splice(i,1);localStorage.setItem("htx_users",JSON.stringify(list));loadHTX();}
+
+    // --- QUẢN LÝ TÀI KHOẢN ---
+    function loadAccounts(){
+      const accs=JSON.parse(localStorage.getItem("accounts"))||[];
+      const tb=document.querySelector("#accTable tbody");
+      tb.innerHTML="";
+      accs.forEach((a,i)=>{
+        if(a.role==="admin") return;
+        tb.innerHTML+=`
+          <tr>
+            <td>${a.username}</td>
+            <td contenteditable onblur="editAccount(${i},'password',this.innerText)">${a.password}</td>
+            <td>${a.role}</td>
+            <td><button class='btn xoa' onclick='deleteAccount(${i})'>Xóa</button></td>
+          </tr>`;
+      });
+    }
+
+    function addAccount(){
+      const u=accUser.value.trim(),p=accPass.value.trim();
+      if(!u||!p)return alert("Nhập đủ thông tin!");
+      const accs=JSON.parse(localStorage.getItem("accounts"))||[];
+      if(accs.find(a=>a.username===u)) return alert("❌ Tài khoản đã tồn tại!");
+      accs.push({username:u,password:p,role:"htx"});
+      localStorage.setItem("accounts",JSON.stringify(accs));
+      accUser.value=accPass.value=""; loadAccounts();
+      alert("✅ Đã thêm tài khoản HTX!");
+    }
+
+    function editAccount(i,k,v){
+      const accs=JSON.parse(localStorage.getItem("accounts"));
+      accs[i][k]=v;
+      localStorage.setItem("accounts",JSON.stringify(accs));
+    }
+
+    function deleteAccount(i){
+      if(!confirm("Xóa tài khoản này?"))return;
+      const accs=JSON.parse(localStorage.getItem("accounts"));
+      accs.splice(i,1);
+      localStorage.setItem("accounts",JSON.stringify(accs));
+      loadAccounts();
+    }
+
+    // INIT
+    loadLots();
+  </script>
+</body>
+</html>

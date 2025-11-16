@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Đăng nhập hệ thống truy xuất nông sản</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #c8e6c9, #a5d6a7);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+    .login-box {
+      background: white;
+      padding: 40px 50px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      width: 380px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+      color: #2e7d32;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    button {
+      background: #4caf50;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    button:hover { background: #2e7d32; }
+    p { font-size: 13px; color: #555; margin-top: 15px; }
+    .logo {
+      font-size: 40px;
+      color: #43a047;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="logo">🌾</div>
+    <h2>Đăng nhập hệ thống</h2>
+    <input type="text" id="username" placeholder="Tên đăng nhập">
+    <input type="password" id="password" placeholder="Mật khẩu">
+    <button onclick="login()">Đăng nhập</button>
+    <p>© 2025 Hệ thống truy xuất nông sản</p>
+  </div>
+
+  <script>
+    // ✅ Khởi tạo tài khoản mặc định
+    if (!localStorage.getItem("accounts")) {
+      const defaultAccs = [
+        { username: "admin", password: "admin123", role: "admin" },
+        { username: "htx_xoai", password: "123456", role: "htx" }
+      ];
+      localStorage.setItem("accounts", JSON.stringify(defaultAccs));
+    }
+
+    function login() {
+      const user = username.value.trim();
+      const pass = password.value.trim();
+      const accounts = JSON.parse(localStorage.getItem("accounts")) || [];
+
+      const found = accounts.find(acc => acc.username === user && acc.password === pass);
+      if (!found) {
+        alert("❌ Sai tài khoản hoặc mật khẩu!");
+        return;
+      }
+
+      localStorage.setItem("currentUser", JSON.stringify(found));
+
+      if (found.role === "admin") {
+        window.location.href = "admin_simple.html";
+      } else if (found.role === "htx") {
+        window.location.href = "htx.html";
+      }
+    }
+  </script>
+</body>
+</html>

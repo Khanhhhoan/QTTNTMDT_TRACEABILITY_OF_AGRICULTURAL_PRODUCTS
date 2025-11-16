@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>HTX - Nhập thông tin lô hàng nông sản + AI Hỗ Trợ (Pro)</title>
+  <style>
+    body { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: #eef5ee; margin: 0; }
+    header { background: #2d8a4d; color: #fff; padding: 15px 30px; font-size: 22px; font-weight: 700; }
+    main { width: 92%; max-width: 1250px; margin: 30px auto; background: #fff; border-radius: 12px; padding: 35px; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+    h2 { color: #2d8a4d; border-bottom: 2px solid #c8e6c9; padding-bottom: 10px; margin-bottom: 25px; }
+    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 22px; }
+    .full { grid-column: 1 / -1; }
+    label { font-weight: 600; color: #2e7d32; display: block; margin-bottom: 6px; }
+    input, textarea, select { width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; box-sizing: border-box; }
+    textarea { min-height: 65px; resize: vertical; }
+    button[type="button"] { grid-column: 1 / -1; padding: 12px 20px; border: none; border-radius: 8px; font-size: 17px; cursor: pointer; background: #4caf50; color: #fff; width: 240px; justify-self: center; }
+    button[type="button"]:hover { background: #2e7d32; }
+
+    /* AI Bubble */
+    #aiBot { position: fixed; right: 25px; bottom: 25px; width: 90px; height: 90px; background: #4caf50; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: grab; box-shadow: 0 4px 12px rgba(0,0,0,.25); transition: transform .18s; z-index: 9999; }
+    #aiBot:active { cursor: grabbing; transform: scale(.98); }
+    #aiBot img { width: 55px; filter: brightness(0) invert(1); }
+
+    /* Chat box */
+    #chatBox { position: fixed; right: 25px; bottom: 130px; width: 360px; max-width: calc(100% - 60px); background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.2); display: none; flex-direction: column; overflow: hidden; animation: fadeIn .22s; z-index: 9998; }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(20px);} to{opacity:1; transform:translateY(0);} }
+    #chatHeader { background: #2d8a4d; color: white; padding: 12px; font-weight: 700; display:flex; align-items:center; justify-content:space-between; }
+    #chatContent { padding: 12px; height: 260px; overflow-y: auto; font-size: 14px; background: #fbfff9; }
+    #chatInputBox { display: flex; border-top: 1px solid #eee; }
+    #chatInput { flex: 1; padding: 10px; border: none; outline: none; }
+    #sendBtn { width: 70px; background: #4caf50; color: white; border: none; cursor: pointer; }
+
+    .quick-btn { padding:6px 10px;margin:4px;background:#e8f5e9;border:1px solid #4caf50;border-radius:6px;cursor:pointer;font-size:13px; }
+    .small-muted { font-size:12px;color:#666;margin-top:6px; }
+
+    /* small screen tweaks */
+    @media (max-width:420px){ #chatBox{ right:10px; left:10px; width:auto; } }
+  </style>
+</head>
+<body>
+<header>🌾 HTX - Nhập thông tin lô hàng nông sản</header>
+
+<main>
+  <h2>🧾 Thêm mới lô hàng</h2>
+  <form id="lotForm" onsubmit="return false;">
+    <div>
+      <label for="lotId">Mã lô hàng:</label>
+      <input id="lotId" required placeholder="Ví dụ: XL-20251115-001">
+    </div>
+    <div>
+      <label for="productName">Tên sản phẩm:</label>
+      <input id="productName" required>
+    </div>
+    <div>
+      <label for="htxName">Tên HTX:</label>
+      <input id="htxName">
+    </div>
+    <div>
+      <label for="farmLocation">Địa chỉ nông trại:</label>
+      <input id="farmLocation">
+    </div>
+    <div>
+      <label for="variety">Giống cây trồng:</label>
+      <input id="variety">
+    </div>
+    <div>
+      <label for="quantity">Số lượng / Khối lượng:</label>
+      <input id="quantity" placeholder="ví dụ: 100kg / 50 thùng">
+    </div>
+    <div>
+      <label for="plantingDate">Ngày trồng:</label>
+      <input type="date" id="plantingDate">
+    </div>
+    <div>
+      <label for="harvestDate">Ngày thu hoạch:</label>
+      <input type="date" id="harvestDate">
+    </div>
+
+    <div class="full">
+      <label for="fertilizer">Phân bón & BVTV:</label>
+      <textarea id="fertilizer"></textarea>
+    </div>
+    <div class="full">
+      <label for="farmingProcess">Quy trình canh tác:</label>
+      <textarea id="farmingProcess"></textarea>
+    </div>
+
+    <div>
+      <label for="certification">Tiêu chuẩn chứng nhận:</label>
+      <select id="certification">
+        <option value="">-- Chọn --</option>
+        <option>VietGAP</option>
+        <option>GlobalGAP</option>
+        <option>Hữu cơ</option>
+      </select>
+    </div>
+    <div>
+      <label for="manager">Người phụ trách:</label>
+      <input id="manager">
+    </div>
+
+    <div class="full">
+      <label for="packInfo">Thông tin đóng gói:</label>
+      <textarea id="packInfo"></textarea>
+    </div>
+    <div class="full">
+      <label for="transportInfo">Thông tin vận chuyển:</label>
+      <textarea id="transportInfo"></textarea>
+    </div>
+
+    <div class="full">
+      <label for="productImg">📸 Hình ảnh:</label>
+      <input type="file" id="productImg" accept="image/*">
+    </div>
+    <div id="preview" class="full" style="text-align:center;"></div>
+
+    <button type="button" id="saveBtn">📥 Gửi thông tin</button>
+  </form>
+</main>
+
+<!-- AI Assistant Icon -->
+<div id="aiBot" role="button" aria-label="Trợ lý AI" title="Mở trợ lý AI">
+  <img src="https://cdn-icons-png.flaticon.com/512/4712/4712035.png" alt="AI">
+</div>
+
+<!-- Chat popup -->
+<div id="chatBox" aria-hidden="true">
+  <div id="chatHeader">
+    <div>🤖 Trợ lý AI HTX</div>
+    <div style="font-size:12px;color:#e6ffe8">Offline</div>
+  </div>
+  <div id="chatContent" aria-live="polite"></div>
+  <div id="chatInputBox">
+    <input id="chatInput" placeholder="Nhập câu hỏi hoặc mô tả lô (ví dụ: 'lô xoài 100kg HTX A trồng 2024-02-01')">
+    <button id="sendBtn" aria-label="Gửi">Gửi</button>
+  </div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  // Element refs
+  const productImg = document.getElementById('productImg');
+  const preview = document.getElementById('preview');
+  const saveBtn = document.getElementById('saveBtn');
+  const lotForm = document.getElementById('lotForm');
+
+  const aiBot = document.getElementById('aiBot');
+  const chatBox = document.getElementById('chatBox');
+  const chatContent = document.getElementById('chatContent');
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  // --- Image preview ---
+  let imgBase64 = '';
+  productImg.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) { preview.innerHTML = ''; imgBase64 = ''; return; }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      imgBase64 = evt.target.result;
+      preview.innerHTML = `<img src="${imgBase64}" style="width:220px;border-radius:10px;max-width:100%;">`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // --- Save lot (push to pendingLots so admin reads it) ---
+  function saveLot() {
+    const lotId = document.getElementById('lotId').value.trim();
+    const productName = document.getElementById('productName').value.trim();
+    const plantingDate = document.getElementById('plantingDate').value;
+    const harvestDate = document.getElementById('harvestDate').value;
+
+    if (!lotId || !productName) {
+      alert('Vui lòng điền Mã lô & Tên sản phẩm.');
+      return;
+    }
+    if (plantingDate && harvestDate && new Date(harvestDate) < new Date(plantingDate)) {
+      alert('Ngày thu hoạch phải sau ngày trồng.');
+      return;
+    }
+
+    const formData = {
+      lotId,
+      productName,
+      htxName: document.getElementById('htxName').value.trim(),
+      farmLocation: document.getElementById('farmLocation').value.trim(),
+      variety: document.getElementById('variety').value.trim(),
+      quantity: document.getElementById('quantity').value.trim(),
+      plantingDate,
+      harvestDate,
+      fertilizer: document.getElementById('fertilizer').value.trim(),
+      farmingProcess: document.getElementById('farmingProcess').value.trim(),
+      certification: document.getElementById('certification').value,
+      manager: document.getElementById('manager').value.trim(),
+      packInfo: document.getElementById('packInfo').value.trim(),
+      transportInfo: document.getElementById('transportInfo').value.trim(),
+      productImg: imgBase64 || null,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+
+    // Save into pendingLots array
+    let pending = JSON.parse(localStorage.getItem('pendingLots') || '[]');
+    pending.push(formData);
+    localStorage.setItem('pendingLots', JSON.stringify(pending));
+
+    alert("✅ Đã gửi thành công! Lô hàng đã được gửi sang trang Admin.");
+    lotForm.reset(); preview.innerHTML = ''; imgBase64 = '';
+  }
+  saveBtn.addEventListener('click', saveLot);
+
+  // --- Chat basic render ---
+  function renderMsg(sender, msg, small=false) {
+    const wrapper = document.createElement('div');
+    wrapper.style.margin = '6px 0';
+    wrapper.innerHTML = `<b>${sender === 'user' ? '🧑‍🌾 Bạn' : '🤖 AI'}:</b> ${escapeHtml(msg)}${small ? ' <div class="small-muted">Gợi ý tự động (offline)</div>' : ''}`;
+    chatContent.appendChild(wrapper);
+    chatContent.scrollTop = chatContent.scrollHeight;
+  }
+
+  function escapeHtml(unsafe) {
+    return (unsafe || '').toString()
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // --- Quick questions UI ---
+  let quickShown = false;
+  function showQuickQuestions() {
+    // prevent duplicate
+    if (quickShown) return;
+    quickShown = true;
+    const qs = [
+      "Gợi ý mã lô hàng",
+      "Gợi ý phân bón",
+      "Gợi ý quy trình canh tác",
+      "Gợi ý ngày trồng & thu hoạch",
+      "Điền giúp toàn bộ form",
+      "Điền theo mô tả"
+    ];
+    const container = document.createElement('div');
+    container.style.marginBottom = '8px';
+    qs.forEach(q => {
+      const btn = document.createElement('button');
+      btn.className = 'quick-btn';
+      btn.innerText = q;
+      btn.addEventListener('click', () => quickAsk(q));
+      container.appendChild(btn);
+    });
+    // a small tip
+    const tip = document.createElement('div');
+    tip.className = 'small-muted';
+    tip.innerText = 'Bạn có thể nhập mô tả tự nhiên để AI tự điền, ví dụ: "lô xoài 100kg HTX A trồng 2024-02-01 thu 2024-05-20 giống cát Hòa Lộc"';
+    chatContent.appendChild(container);
+    chatContent.appendChild(tip);
+    chatContent.scrollTop = chatContent.scrollHeight;
+  }
+
+  // --- Quick ask handling & auto-fill ---
+  function quickAsk(q) {
+    renderMsg('user', q);
+    setTimeout(() => {
+      if (q.includes("mã lô")) {
+        const generated = "XL-" + new Date().toISOString().slice(0,10).replace(/-/g,"") + "-" + Math.floor(Math.random()*900+100);
+        renderMsg('bot', "📌 Gợi ý mã lô: " + generated);
+      }
+      else if (q.includes("phân bón")) {
+        renderMsg('bot', "📌 Gợi ý phân bón mẫu: NPK 16-16-8 (bón 2 lần), Hữu cơ vi sinh 500kg/ha. Ghi rõ liều lượng và thời điểm bón.");
+      }
+      else if (q.includes("quy trình")) {
+        renderMsg('bot', "📌 Gợi ý quy trình mẫu: 1) Chuẩn bị đất 2) Trồng 3) Tưới nhỏ giọt 4) Kiểm soát sâu bệnh IPM 5) Bón phân hữu cơ & NPK 6) Thu hoạch thủ công.");
+      }
+      else if (q.includes("ngày")) {
+        renderMsg('bot', "📌 Gợi ý: chọn ngày trồng phù hợp vùng, ví dụ: 2024-02-01 — dự kiến thu hoạch: 2024-05-20");
+      }
+      else if (q.includes("Điền giúp toàn bộ")) {
+        autoFillForm();
+        renderMsg('bot', "🤖 Mình đã tự điền toàn bộ form (mẫu).");
+      }
+      else if (q.includes("Điền theo mô tả")) {
+        renderMsg('bot', "🤖 Nhập mô tả vào ô chat, AI sẽ cố gắng phân tích và điền form.");
+      }
+      else {
+        renderMsg('bot', "🤖 Mình chưa hiểu, vui lòng mô tả rõ hơn.");
+      }
+    }, 200);
+  }
+
+  // Auto-fill sample
+  function autoFillForm() {
+    document.getElementById("lotId").value = "XL-" + new Date().toISOString().slice(0,10).replace(/-/g,"") + "-001";
+    document.getElementById("productName").value = "Xoài cát Hòa Lộc";
+    document.getElementById("htxName").value = "HTX Nông Nghiệp Xanh";
+    document.getElementById("farmLocation").value = "Ấp 5, Hòa Bình, Vĩnh Long";
+    document.getElementById("variety").value = "Xoài cát HL-01";
+    document.getElementById("quantity").value = "100kg";
+    document.getElementById("plantingDate").value = "2024-02-01";
+    document.getElementById("harvestDate").value = "2024-05-20";
+    document.getElementById("fertilizer").value = "NPK 16-16-8 (bón 3 lần), Hữu cơ vi sinh 1 tấn/ha";
+    document.getElementById("farmingProcess").value = "Tưới nhỏ giọt, quản lý cỏ bằng cơ học, giám sát sâu bệnh theo IPM.";
+    document.getElementById("packInfo").value = "Đóng thùng carton 5kg – Túi lưới";
+    document.getElementById("transportInfo").value = "Xe lạnh 5-10°C giao trong 12h";
+    document.getElementById("manager").value = "Nguyễn Văn A";
+  }
+
+  // Heuristic parser: parse natural language description and fill fields
+  function parseAndFill(text) {
+    const raw = (text||"").toLowerCase();
+
+    // product name: try to find known product words (extendable)
+    const products = ["xoài","cam","bắp","gạo","cà phê","dưa hấu","chuối","đậu"];
+    for (const p of products) {
+      if (raw.includes(p)) {
+        // capitalize first letter
+        document.getElementById("productName").value = p.charAt(0).toUpperCase()+p.slice(1);
+        break;
+      }
+    }
+
+    // HTX name
+    const htxMatch = raw.match(/htx\s*([\w\s\-À-ỹ]+)/i);
+    if (htxMatch) document.getElementById("htxName").value = capitalizeWords(htxMatch[1].trim());
+
+    // lot id if provided like XL-202...
+    const lotMatch = raw.match(/(xl[-_\s]*\d{6,}|mã lô[:\s]*xl[-_\d]+)/i);
+    if (lotMatch) document.getElementById("lotId").value = lotMatch[0].replace(/\s+/g,"");
+
+    // quantity (e.g., 100kg, 50 thùng, 1 tấn)
+    const qtyMatch = raw.match(/(\d+(?:[.,]\d+)?\s*(kg|tấn|tan|thùng|chai|g|kgs))/i);
+    if (qtyMatch) document.getElementById("quantity").value = qtyMatch[0].replace(/\s+/g," ");
+
+    // dates: yyyy-mm-dd or dd/mm/yyyy
+    const dateIso = raw.match(/\d{4}-\d{2}-\d{2}/);
+    if (dateIso) {
+      // if two dates found, assume first is planting, second is harvest
+      const allIso = raw.match(/\d{4}-\d{2}-\d{2}/g) || [];
+      if (allIso.length >= 1) document.getElementById("plantingDate").value = allIso[0];
+      if (allIso.length >= 2) document.getElementById("harvestDate").value = allIso[1];
+    } else {
+      // dd/mm/yyyy
+      const dmy = raw.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/);
+      if (dmy) {
+        const d = pad(dmy[1]), m = pad(dmy[2]), y = dmy[3];
+        document.getElementById("plantingDate").value = y + '-' + m + '-' + d;
+      }
+    }
+
+    // variety after 'giống' or 'giong'
+    const varMatch = raw.match(/gi[oọ]ng\s*[:\-]?\s*([\w\s\-À-ỹ]+)/i);
+    if (varMatch) document.getElementById("variety").value = capitalizeWords(varMatch[1].trim());
+
+    // fertilizer keywords
+    if (raw.includes("npk") || raw.includes("phân")) {
+      const fert = raw.match(/(npk[^\.,;]*)|((?:phân|hữu cơ)[^\.,;]*)/i);
+      if (fert) document.getElementById("fertilizer").value = capitalizeFirst(fert[0].trim());
+    }
+
+    // farming process heuristics
+    if (raw.includes("tưới") || raw.includes("ipm") || raw.includes("thu hoạch")) {
+      let proc = [];
+      if (raw.includes("tưới")) proc.push("Tưới theo nhu cầu");
+      if (raw.includes("ipm")) proc.push("Quản lý sâu bệnh theo IPM");
+      if (raw.includes("thu hoạch")) proc.push("Thu hoạch thủ công");
+      document.getElementById("farmingProcess").value = proc.join(" – ");
+    }
+
+    // manager
+    const mgr = raw.match(/(người phụ trách|người liên hệ|người liên lạc)[:\s]*([\w\sÀ-ỹ]+)/i);
+    if (mgr) document.getElementById("manager").value = capitalizeWords(mgr[2].trim());
+
+    renderMsg('bot', '🤖 Mình đã cố gắng phân tích và điền những trường tìm được. Kiểm tra lại và chỉnh nếu cần.', true);
+  }
+
+  function pad(s){ return s.toString().padStart(2,'0'); }
+  function capitalizeWords(s){ return s.replace(/\b\w/g, c => c.toUpperCase()); }
+  function capitalizeFirst(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  // --- AI reply for simple questions (offline rules) ---
+  function aiReply(qraw) {
+    const q = (qraw || '').toLowerCase();
+    if (q.includes('mã lô') || q.includes('malo') || q.includes('lot id'))
+      return '📌 Mã lô gợi ý: XL-[YYYYMMDD]-[Số thứ tự], ví dụ XL-20251115-001';
+    if (q.includes('phân bón') || q.includes('bón'))
+      return '📌 Gợi ý phân bón: NPK 16-16-8 (bón 2 lần), Hữu cơ 500kg/ha. Ghi rõ liều lượng và thời điểm.';
+    if (q.includes('quy trình') || q.includes('canh tác'))
+      return '📌 Quy trình mẫu: Chuẩn bị đất → Trồng → Tưới nhỏ giọt → IPM → Bón phân → Thu hoạch.';
+    if (q.includes('thu hoạch') || q.includes('ngày thu'))
+      return '📌 Ngày thu hoạch nên để sau ngày trồng; lưu theo định dạng yyyy-mm-dd.';
+    if (q.includes('điền') && q.includes('giúp'))
+      return '🤖 Bấm nút "Điền giúp toàn bộ form" hoặc mô tả lô hàng vào ô chat để AI tự điền.';
+    return '🤖 Mình chưa hiểu rõ, bạn mô tả thêm (ví dụ: \"lô xoài 100kg HTX A trồng 2024-02-01 thu 2024-05-20\")';
+  }
+
+  function sendAIMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+    renderMsg('user', text);
+    // If user wrote "Điền..." or natural description, try parseAndFill
+    setTimeout(() => {
+      // if text contains keywords indicating fill by description
+      if (/điền|tự điền|mô tả|lô|trồng|thu/i.test(text) && text.length > 10) {
+        parseAndFill(text);
+      }
+      const reply = aiReply(text);
+      renderMsg('bot', reply);
+    }, 250);
+    chatInput.value = '';
+  }
+
+  sendBtn.addEventListener('click', sendAIMessage);
+  chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendAIMessage(); } });
+
+  // --- Draggable + Click behavior for aiBot (toggle shows quick questions) ---
+  (function makeDraggable(button, container) {
+    let isDragging = false, moved = false;
+    let startX = 0, startY = 0, origX = 0, origY = 0;
+
+    button.addEventListener('pointerdown', (e) => {
+      button.setPointerCapture && button.setPointerCapture(e.pointerId);
+      isDragging = true; moved = false;
+      startX = e.clientX; startY = e.clientY;
+      const rect = button.getBoundingClientRect();
+      origX = rect.left; origY = rect.top;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+      button.style.left = (origX + dx) + 'px';
+      button.style.top = (origY + dy) + 'px';
+      button.style.position = 'fixed';
+    });
+
+    window.addEventListener('pointerup', (e) => {
+      if (!isDragging) return;
+      button.releasePointerCapture && button.releasePointerCapture(e.pointerId);
+      isDragging = false;
+      if (!moved) {
+        const visible = container.style.display === 'flex';
+        container.style.display = visible ? 'none' : 'flex';
+        container.setAttribute('aria-hidden', visible ? 'true' : 'false');
+        if (!visible) {
+          chatInput.focus();
+          // show quick questions only when opened
+          setTimeout(showQuickQuestions, 80);
+        }
+      }
+    });
+  })(aiBot, chatBox);
+
+  // Close chat when clicking outside
+  window.addEventListener('click', (e) => {
+    const path = e.composedPath ? e.composedPath() : (e.path || []);
+    if (!path.includes(chatBox) && !path.includes(aiBot) && chatBox.style.display === 'flex') {
+      chatBox.style.display = 'none';
+      chatBox.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  // Init: ensure pendingLots exists for admin compatibility
+  if(!localStorage.getItem("pendingLots")) localStorage.setItem("pendingLots", JSON.stringify([]));
+});
+</script>
+</body>
+</html>

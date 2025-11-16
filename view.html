@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Truy xuất nguồn gốc - Nông sản Việt Nam</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
+<style>
+:root {
+  --green: #1b9e5e;
+  --green-dark: #156d45;
+  --light: #f4f9f5;
+  --card: #ffffff;
+  --shadow: rgba(0,0,0,0.12);
+}
+
+/* ================== BODY ================== */
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--light);
+  font-family: "Segoe UI", sans-serif;
+  color: #333;
+}
+
+/* ================== CONTAINER CHÍNH ================== */
+.container {
+  max-width: 1200px;
+  margin: 28px auto;
+  background: var(--card);
+  border-radius: 20px;
+  box-shadow: 0 10px 26px var(--shadow);
+  padding-bottom: 20px;
+  overflow: hidden;
+}
+
+.header {
+  background: linear-gradient(120deg, var(--green), #4caf50);
+  padding: 22px;
+  color: white;
+}
+.header h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+/* ================== DEMO ================== */
+.demo-title {
+  text-align: center;
+  margin: 20px 0;
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--green-dark);
+}
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px,1fr));
+  gap: 20px;
+  padding: 20px;
+}
+.demo-card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+  overflow: hidden;
+  transition: 0.2s;
+  cursor: pointer;
+}
+.demo-card:hover {
+  transform: translateY(-3px);
+}
+.demo-card img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+}
+.demo-card .info {
+  padding: 12px;
+}
+.demo-card .info h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--green);
+}
+.demo-card small {
+  font-size: 12px;
+  color: #666;
+}
+
+/* ================== VIEW CHI TIẾT ================== */
+.content {
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+  flex-wrap: wrap;
+}
+
+.left-col {
+  flex: 0 0 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.product-img {
+  width: 100%;
+  height: 280px;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+  object-fit: cover;
+}
+
+.summary {
+  background: #f6fdf8;
+  padding: 14px;
+  border-radius: 16px;
+  border-left: 5px solid var(--green);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.summary h2 {
+  margin: 0 0 8px 0;
+  color: var(--green-dark);
+}
+
+.qr-box {
+  text-align: center;
+  background: white;
+  padding: 12px;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px var(--shadow);
+}
+
+/* ====== RIGHT COLUMN ====== */
+.right-col {
+  flex: 1;
+  min-width: 300px;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+  border-left: 4px solid var(--green);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.card h3 {
+  margin: 0 0 10px 0;
+  color: var(--green-dark);
+}
+
+/* ================== CHAT AI ================== */
+#toggleAI {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle,#7dfac0,#1b9e5e);
+  border: none;
+  color: white;
+  font-size: 28px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  z-index: 9999;
+}
+#toggleAI:hover {
+  transform: scale(1.08);
+}
+
+#aiChat {
+  position: fixed;
+  bottom: 95px;
+  right: 20px;
+  width: 330px;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 9998;
+}
+
+/* HEADER CHAT */
+#aiHeader {
+  background: linear-gradient(120deg,#1b9e5e,#4caf50);
+  padding: 10px;
+  color: white;
+  font-weight: bold;
+  text-align:center;
+}
+
+/* BODY CHAT */
+#aiMessages {
+  height: 260px;
+  overflow-y: auto;
+  padding: 10px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hàng chat: gồm avatar + bubble */
+.aiRow {
+  display: flex;
+  align-items: flex-end;
+  margin: 6px 0;
+}
+
+.aiRow.user {
+  justify-content: flex-end;
+}
+
+.aiRow.bot {
+  justify-content: flex-start;
+}
+
+/* Avatar nhỏ */
+.aiAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #c8e6c9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+.aiAvatar.bot {
+  background: #1b9e5e;
+  color: white;
+}
+
+.aiAvatar.user {
+  background: #90caf9;
+  color: white;
+}
+
+/* Bong bóng chat */
+.aiBubble {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.aiBubble.user {
+  background: #d9f9df;
+  border-bottom-right-radius: 4px;
+}
+
+.aiBubble.bot {
+  background: #ececec;
+  border-bottom-left-radius: 4px;
+}
+
+/* Hiệu ứng typing "..." */
+.typingIndicator {
+  display: inline-block;
+  min-width: 30px;
+}
+
+.typingDot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin: 0 2px;
+  border-radius: 50%;
+  background: #999;
+  animation: typingBlink 1s infinite ease-in-out;
+}
+
+.typingDot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typingDot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typingBlink {
+  0%   { opacity: 0.2; transform: translateY(0); }
+  50%  { opacity: 1;   transform: translateY(-2px); }
+  100% { opacity: 0.2; transform: translateY(0); }
+}
+
+
+#suggestions {
+  padding: 8px;
+  background: #f3f7f4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.suggestBtn {
+  padding: 4px 10px;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#aiInputBox {
+  display: flex;
+  border-top: 1px solid #ddd;
+}
+#aiInput {
+  flex: 1;
+  border: none;
+  padding: 10px;
+}
+#aiSend, #aiMic {
+  width: 46px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+}
+</style>
+</head>
+
+<body>
+
+<button id="toggleAI">🤖</button>
+<audio id="aiSound">
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-back-2575.mp3" type="audio/mpeg">
+</audio>
+
+<!-- ================= CHATBOX AI ================= -->
+<div id="aiChat">
+  <div id="aiHeader">AI – Trợ lý truy xuất</div>
+
+  <div id="aiMessages"></div>
+
+  <div id="suggestions">
+    <button class="suggestBtn">Tóm tắt lô hàng</button>
+    <button class="suggestBtn">Nguồn gốc ở đâu?</button>
+    <button class="suggestBtn">Ngày thu hoạch?</button>
+    <button class="suggestBtn">Quy trình sản xuất?</button>
+    <button class="suggestBtn">Lô hàng có an toàn không?</button>
+  </div>
+
+  <div id="aiInputBox">
+    <input id="aiInput" placeholder="Nhập câu hỏi…">
+    <button id="aiMic">🎙</button>
+    <button id="aiSend">➤</button>
+  </div>
+</div>
+
+
+<div id="demoMode"></div>
+
+<div class="container" id="mainView" style="display:none;">
+  <div class="header">
+    <h1>Thông tin truy xuất nguồn gốc</h1>
+  </div>
+
+  <div class="content">
+    <div class="left-col">
+      <img id="productImg" class="product-img">
+
+      <div class="summary">
+        <h2 id="summaryTitle"></h2>
+        <p><b>Mã lô:</b> <span id="sum_lotId"></span></p>
+        <p><b>HTX:</b> <span id="sum_htx"></span></p>
+      </div>
+
+      <div class="qr-box">
+        <canvas id="qrCanvas"></canvas>
+        <small>Quét mã để xem trực tuyến</small>
+      </div>
+    </div>
+
+    <div class="right-col" id="detailCards"></div>
+  </div>
+</div>
+
+
+<script>
+/* ===================== CHECK LOT PARAM ===================== */
+(function(){
+  const params = new URLSearchParams(location.search);
+  const lotParam = params.get("lot");
+  const chain = JSON.parse(localStorage.getItem("chain") || "[]");
+
+  if(!lotParam){
+    loadDemo(chain);
+    return;
+  }
+
+  const lot = chain.find(item => item.lotId === lotParam);
+
+  if(!lot){
+    document.body.innerHTML = "<h2 style='text-align:center;color:red;margin-top:50px'>Không tìm thấy dữ liệu lô hàng!</h2>";
+  } else {
+    document.getElementById("demoMode").style.display = "none";
+    document.getElementById("mainView").style.display = "block";
+    renderDetail(lot);
+  }
+})();
+
+/* ===================== DEMO ===================== */
+function loadDemo(chain){
+  const demo = document.getElementById("demoMode");
+
+  if(chain.length === 0){
+    demo.innerHTML = "<h3 style='text-align:center'>Chưa có lô hàng nào được duyệt</h3>";
+    return;
+  }
+
+  let html = `
+    <h2 class="demo-title">🧩 Chọn lô hàng để xem Demo</h2>
+    <div class="demo-grid">
+  `;
+
+  chain.forEach(lot => {
+    html += `
+      <div class="demo-card" onclick="openLot('${lot.lotId}')">
+        <img src="${lot.productImg || 'https://via.placeholder.com/400x250'}">
+        <div class="info">
+          <h3>${lot.productName}</h3>
+          <small>Mã lô: ${lot.lotId}</small><br>
+          <small>HTX: ${lot.htxName}</small>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  demo.innerHTML = html;
+}
+
+function openLot(id){
+  window.location.href = `view.html?lot=${id}`;
+}
+
+/* ===================== RENDER DETAIL ===================== */
+function renderDetail(lot){
+  document.getElementById("productImg").src = lot.productImg || "https://via.placeholder.com/400x250";
+  document.getElementById("summaryTitle").innerText = lot.productName;
+  document.getElementById("sum_lotId").innerText = lot.lotId;
+  document.getElementById("sum_htx").innerText = lot.htxName;
+
+  new QRious({
+    element: document.getElementById("qrCanvas"),
+    value: location.href,
+    size: 180
+  });
+
+  const detail = document.getElementById("detailCards");
+
+  detail.innerHTML = `
+    <div class="card">
+      <h3>Thông tin chung</h3>
+      <p><b>Sản phẩm:</b> ${lot.productName}</p>
+      <p><b>Mã lô:</b> ${lot.lotId}</p>
+      <p><b>HTX sản xuất:</b> ${lot.htxName}</p>
+      <p><b>Người phụ trách:</b> ${lot.manager || "—"}</p>
+    </div>
+
+    <div class="card">
+      <h3>Giống & Số lượng</h3>
+      <p><b>Giống:</b> ${lot.variety || "—"}</p>
+      <p><b>Số lượng:</b> ${lot.quantity || "—"}</p>
+      <p><b>Tiêu chuẩn:</b> ${lot.certification || "—"}</p>
+    </div>
+
+    <div class="card">
+      <h3>Vùng trồng & Canh tác</h3>
+      <p><b>Nơi trồng:</b> ${lot.farmLocation || "—"}</p>
+      <p><b>Ngày trồng:</b> ${lot.plantingDate || "—"}</p>
+      <p><b>Ngày thu hoạch:</b> ${lot.harvestDate || "—"}</p>
+    </div>
+
+    <div class="card">
+      <h3>Quy trình sản xuất</h3>
+      <p><b>Phân bón:</b> ${lot.fertilizer || "—"}</p>
+      <p><b>Quy trình:</b> ${lot.farmingProcess || "—"}</p>
+    </div>
+
+    <div class="card">
+      <h3>Đóng gói & Vận chuyển</h3>
+      <p><b>Đóng gói:</b> ${lot.packInfo || "—"}</p>
+      <p><b>Vận chuyển:</b> ${lot.transportInfo || "—"}</p>
+    </div>
+
+    <div class="card">
+      <h3>Ghi nhận Blockchain</h3>
+      <p><b>Thời gian:</b> ${lot.timestamp || "—"}</p>
+      <p><b>Hash:</b></p>
+      <div style="background:#eef5ef;padding:8px;border-radius:10px;font-size:12px;">
+        ${lot.hash || "—"}
+      </div>
+    </div>
+  `;
+}
+
+/* ===================== AI CHATBOX – NÂNG CẤP STYLE A ===================== */
+document.addEventListener("DOMContentLoaded", function(){
+
+  const sound = document.getElementById("aiSound");
+
+  function playSound(){
+    if(!sound) return;
+    try{
+      sound.currentTime = 0;
+      sound.play();
+    }catch(e){}
+  }
+
+  /* Lấy dữ liệu lô hàng từ các thẻ .card p */
+  function parseLotData(){
+    const raw = {};
+    document.querySelectorAll(".card p").forEach(p=>{
+      const txt = p.innerText;
+      if(!txt.includes(":")) return;
+      const parts = txt.split(":");
+      const key = parts[0].trim().toLowerCase();
+      const value = parts.slice(1).join(":").trim();
+      raw[key] = value;
+    });
+
+    return {
+      product:      raw["sản phẩm"],
+      lotId:        raw["mã lô"],
+      htx:          raw["htx sản xuất"] || raw["htx"],
+      manager:      raw["người phụ trách"],
+      variety:      raw["giống"],
+      quantity:     raw["số lượng"],
+      certification:raw["tiêu chuẩn"],
+      location:     raw["nơi trồng"],
+      plantDate:    raw["ngày trồng"],
+      harvestDate:  raw["ngày thu hoạch"],
+      fertilizer:   raw["phân bón"],
+      process:      raw["quy trình"],
+      packing:      raw["đóng gói"],
+      transport:    raw["vận chuyển"]
+    };
+  }
+
+  /* Tóm tắt lô hàng kiểu "ChatGPT" */
+  function buildSummary(d){
+    let s = "";
+
+    if(d.product || d.lotId){
+      s += `Lô hàng ${d.lotId || ""} là sản phẩm ${d.product || "nông sản"} do ${d.htx || "một hợp tác xã"} tổ chức sản xuất. `;
+    }
+    if(d.location){
+      s += `Vùng trồng được ghi nhận tại ${d.location}. `;
+    }
+    if(d.plantDate || d.harvestDate){
+      s += `Thời gian canh tác kéo dài từ ${d.plantDate || "…"} đến ${d.harvestDate || "…"}, phù hợp với chu kỳ sinh trưởng của giống ${d.variety || "cây trồng"} . `;
+    }
+    if(d.certification){
+      s += `Lô hàng áp dụng tiêu chuẩn ${d.certification}, giúp kiểm soát điều kiện sản xuất theo một bộ tiêu chí rõ ràng. `;
+    }
+    if(d.packing || d.transport){
+      s += `Sau thu hoạch, sản phẩm được ${d.packing || "đóng gói"} và vận chuyển theo hình thức ${d.transport || "chưa được khai báo chi tiết"}. `;
+    }
+    if(d.manager){
+      s += `Người phụ trách chính được ghi nhận là ${d.manager}. `;
+    }
+
+    if(!s){
+      s = "Hệ thống chưa có đủ dữ liệu để tóm tắt lô hàng. Bạn có thể xem chi tiết trong các mục thông tin ở bên phải màn hình.";
+    }
+
+    return s.trim();
+  }
+
+  /* Logic trả lời của AI – nâng cấp */
+  function aiReply(question){
+    const d = parseLotData();
+    const q = question.toLowerCase().trim();
+
+    // 1. Tóm tắt / giới thiệu
+    if(
+      q.includes("tóm tắt") ||
+      q.includes("giới thiệu") ||
+      q.includes("tổng quan") ||
+      q.includes("lô hàng này") ||
+      q.includes("cho tôi biết về lô hàng") ||
+      q.includes("thông tin chung")
+    ){
+      return buildSummary(d);
+    }
+
+    // 2. Nguồn gốc / xuất xứ
+    if(
+      q.includes("nguồn gốc") ||
+      q.includes("xuất xứ") ||
+      q.includes("trồng ở đâu") ||
+      q.includes("ở đâu trồng") ||
+      q.includes("vùng trồng") ||
+      q.includes("khu vực trồng")
+    ){
+      let ans = "";
+      if(d.location){
+        ans += `Lô hàng này được canh tác tại ${d.location}. `;
+      }
+      if(d.htx){
+        ans += `Đơn vị tổ chức sản xuất là ${d.htx}. `;
+      }
+      if(!ans){
+        ans = "Thông tin về vùng trồng và đơn vị sản xuất chưa được khai báo rõ ràng trong hệ thống.";
+      }
+      return ans;
+    }
+
+    // 3. Thời gian canh tác
+    if(
+      q.includes("ngày trồng") ||
+      q.includes("trồng khi nào") ||
+      q.includes("ngày thu hoạch") ||
+      q.includes("thu hoạch khi nào") ||
+      q.includes("thời gian canh tác") ||
+      q.includes("bao lâu")
+    ){
+      let ans = "Thông tin thời gian canh tác của lô hàng như sau: ";
+      if(d.plantDate)   ans += `Ngày trồng: ${d.plantDate}. `;
+      if(d.harvestDate) ans += `Ngày thu hoạch: ${d.harvestDate}. `;
+      if(!d.plantDate && !d.harvestDate){
+        ans = "Chưa có thông tin chi tiết về ngày trồng và ngày thu hoạch cho lô hàng này.";
+      }
+      return ans;
+    }
+
+    // 4. Quy trình / phân bón
+    if(
+      q.includes("quy trình") ||
+      q.includes("canh tác") ||
+      q.includes("chăm sóc") ||
+      q.includes("phân bón") ||
+      q.includes("bón phân") ||
+      q.includes("sử dụng phân gì")
+    ){
+      let ans = "";
+      if(d.process){
+        ans += `Quy trình sản xuất được khai báo: ${d.process}. `;
+      }
+      if(d.fertilizer){
+        ans += `Thông tin phân bón: ${d.fertilizer}. `;
+      }
+      if(d.certification){
+        ans += `Lô hàng áp dụng tiêu chuẩn ${d.certification}, giúp việc kiểm soát quy trình sản xuất chặt chẽ hơn.`;
+      }
+      if(!ans){
+        ans = "HTX chưa cung cấp chi tiết về quy trình canh tác và loại phân bón sử dụng cho lô hàng này.";
+      }
+      return ans;
+    }
+
+    // 5. Đóng gói / vận chuyển / bảo quản
+    if(
+      q.includes("đóng gói") ||
+      q.includes("bao bì") ||
+      q.includes("vận chuyển") ||
+      q.includes("giao hàng") ||
+      q.includes("bảo quản")
+    ){
+      let ans = "Thông tin sau thu hoạch của lô hàng: ";
+      if(d.packing){
+        ans += `Đóng gói: ${d.packing}. `;
+      }
+      if(d.transport){
+        ans += `Vận chuyển: ${d.transport}. `;
+      }
+      if(!d.packing && !d.transport){
+        ans = "Hiện chưa có thông tin chi tiết về khâu đóng gói và vận chuyển cho lô hàng này.";
+      }
+      return ans;
+    }
+
+    // 6. An toàn / chất lượng
+    if(
+      q.includes("an toàn") ||
+      q.includes("sạch") ||
+      q.includes("chất lượng") ||
+      q.includes("có tốt không") ||
+      q.includes("đảm bảo không") ||
+      q.includes("tin tưởng được không")
+    ){
+      let ans = "";
+      if(d.certification){
+        ans += `Lô hàng áp dụng tiêu chuẩn ${d.certification}, đây là một trong những cơ sở quan trọng để đánh giá mức độ an toàn và chất lượng sản phẩm. `;
+      }
+      if(d.process){
+        ans += `Quy trình sản xuất cũng được khai báo: ${d.process}. `;
+      }
+      if(!ans){
+        ans = "Hệ thống chưa có thông tin đầy đủ về tiêu chuẩn hoặc quy trình, nên rất khó kết luận mức độ an toàn chỉ dựa trên dữ liệu hiện tại.";
+      }else{
+        ans += "Tuy nhiên, chất lượng thực tế vẫn phụ thuộc vào việc các bên có tuân thủ đúng quy trình đã công bố hay không.";
+      }
+      return ans;
+    }
+
+    // 7. Yêu cầu "liệt kê đầy đủ thông tin"
+    if(
+      q.includes("đầy đủ") ||
+      q.includes("liệt kê") ||
+      q.includes("toàn bộ thông tin") ||
+      q.includes("chi tiết lô hàng") ||
+      q.includes("show info")
+    ){
+      let ans = "Dưới đây là các thông tin đang được khai báo cho lô hàng:\n";
+      if(d.product)      ans += `• Sản phẩm: ${d.product}\n`;
+      if(d.lotId)        ans += `• Mã lô: ${d.lotId}\n`;
+      if(d.htx)          ans += `• HTX sản xuất: ${d.htx}\n`;
+      if(d.location)     ans += `• Nơi trồng: ${d.location}\n`;
+      if(d.variety)      ans += `• Giống: ${d.variety}\n`;
+      if(d.quantity)     ans += `• Số lượng: ${d.quantity}\n`;
+      if(d.plantDate)    ans += `• Ngày trồng: ${d.plantDate}\n`;
+      if(d.harvestDate)  ans += `• Ngày thu hoạch: ${d.harvestDate}\n`;
+      if(d.certification)ans += `• Tiêu chuẩn: ${d.certification}\n`;
+      if(d.fertilizer)   ans += `• Phân bón: ${d.fertilizer}\n`;
+      if(d.process)      ans += `• Quy trình: ${d.process}\n`;
+      if(d.packing)      ans += `• Đóng gói: ${d.packing}\n`;
+      if(d.transport)    ans += `• Vận chuyển: ${d.transport}\n`;
+
+      if(ans.split("\n").length <= 2){
+        ans = "Hiện hệ thống chưa có nhiều thông tin để liệt kê chi tiết cho lô hàng này.";
+      }
+      return ans;
+    }
+
+    // 8. Fallback: hỏi trực tiếp theo từ khoá
+    const directRules = [
+      ["sản phẩm", d.product],
+      ["mã lô", d.lotId],
+      ["htx", d.htx],
+      ["người phụ trách", d.manager],
+      ["giống", d.variety],
+      ["số lượng", d.quantity],
+      ["tiêu chuẩn", d.certification],
+      ["nơi trồng", d.location],
+      ["ngày trồng", d.plantDate],
+      ["ngày thu hoạch", d.harvestDate],
+      ["phân bón", d.fertilizer],
+      ["quy trình", d.process],
+      ["đóng gói", d.packing],
+      ["vận chuyển", d.transport]
+    ];
+    for(const [key,val] of directRules){
+      if(q.includes(key) && val){
+        return `Thông tin về ${key}: ${val}`;
+      }
+    }
+
+    // 9. Mặc định
+    return "Tôi chưa hiểu rõ câu hỏi. Bạn có thể hỏi về: tóm tắt lô hàng, nguồn gốc, thời gian trồng – thu hoạch, quy trình sản xuất, đóng gói – vận chuyển hoặc mức độ an toàn – chất lượng.";
+  }
+
+  /* ----------------- TẠO BONG BÓNG CHAT ----------------- */
+  function addMessageBubble(text, sender){
+    const box = document.getElementById("aiMessages");
+    if(!box) return;
+
+    const row = document.createElement("div");
+    row.className = "aiRow " + (sender === "user" ? "user" : "bot");
+
+    const avatar = document.createElement("div");
+    avatar.className = "aiAvatar " + (sender === "user" ? "user" : "bot");
+    avatar.textContent = sender === "user" ? "U" : "AI";
+
+    const bubble = document.createElement("div");
+    bubble.className = "aiBubble " + (sender === "user" ? "user" : "bot");
+    bubble.textContent = text;
+
+    if(sender === "user"){
+      row.appendChild(bubble);
+      row.appendChild(avatar);
+    }else{
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+    }
+
+    box.appendChild(row);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  /* Typing effect cho bot */
+  function addBotTyping(){
+    const box = document.getElementById("aiMessages");
+    if(!box) return;
+
+    const row = document.createElement("div");
+    row.className = "aiRow bot";
+    row.id = "aiTypingRow";
+
+    const avatar = document.createElement("div");
+    avatar.className = "aiAvatar bot";
+    avatar.textContent = "AI";
+
+    const bubble = document.createElement("div");
+    bubble.className = "aiBubble bot";
+
+    const indicator = document.createElement("div");
+    indicator.className = "typingIndicator";
+    indicator.innerHTML = `
+      <span class="typingDot"></span>
+      <span class="typingDot"></span>
+      <span class="typingDot"></span>
+    `;
+    bubble.appendChild(indicator);
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    box.appendChild(row);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function removeBotTyping(){
+    const row = document.getElementById("aiTypingRow");
+    if(row && row.parentNode){
+      row.parentNode.removeChild(row);
+    }
+  }
+
+  function addBotMessageWithTyping(fullText){
+    addBotTyping();
+    setTimeout(()=>{
+      removeBotTyping();
+      // Gõ chữ dần
+      const box = document.getElementById("aiMessages");
+      if(!box) return;
+
+      const row = document.createElement("div");
+      row.className = "aiRow bot";
+
+      const avatar = document.createElement("div");
+      avatar.className = "aiAvatar bot";
+      avatar.textContent = "AI";
+
+      const bubble = document.createElement("div");
+      bubble.className = "aiBubble bot";
+      bubble.textContent = "";
+
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+      box.appendChild(row);
+      box.scrollTop = box.scrollHeight;
+
+      let i = 0;
+      const interval = setInterval(() => {
+        bubble.textContent = fullText.slice(0, i);
+        box.scrollTop = box.scrollHeight;
+        i++;
+        if(i > fullText.length){
+          clearInterval(interval);
+          playSound();
+          speak(fullText);
+        }
+      }, 15); // tốc độ gõ
+    }, 400);
+  }
+
+  /* ----------------- GỬI TIN NHẮN ----------------- */
+  function sendMsg(){
+    const input = document.getElementById("aiInput");
+    if(!input) return;
+
+    const text = input.value.trim();
+    if(!text) return;
+
+    addMessageBubble(text, "user");
+
+    const reply = aiReply(text);
+    addBotMessageWithTyping(reply);
+
+    input.value = "";
+  }
+
+  /* ----------------- GÁN SỰ KIỆN ----------------- */
+  const btnSend = document.getElementById("aiSend");
+  if(btnSend){
+    btnSend.onclick = sendMsg;
+  }
+
+  const inputBox = document.getElementById("aiInput");
+  if(inputBox){
+    inputBox.onkeydown = (e)=>{
+      if(e.key === "Enter") sendMsg();
+    };
+  }
+
+  document.querySelectorAll(".suggestBtn").forEach(btn=>{
+    btn.onclick = ()=>{
+      const input = document.getElementById("aiInput");
+      if(!input) return;
+      input.value = btn.innerText;
+      sendMsg();
+    };
+  });
+
+  const toggleAI = document.getElementById("toggleAI");
+  if(toggleAI){
+    toggleAI.onclick = ()=>{
+      const chat = document.getElementById("aiChat");
+      if(!chat) return;
+      chat.style.display = (chat.style.display === "flex") ? "none" : "flex";
+    };
+  }
+/* ===================== TTS – AI đọc câu trả lời ===================== */
+function speak(text){
+  try{
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "vi-VN";
+    utter.rate = 1.05;      // tốc độ
+    utter.pitch = 1.0;      // giọng tự nhiên
+    utter.volume = 1.0;     // âm lượng
+    speechSynthesis.cancel(); // tránh chồng giọng
+    speechSynthesis.speak(utter);
+  }catch(e){
+    console.log("TTS error:", e);
+  }
+}
+});
+</script>
+</body>
+</html>
